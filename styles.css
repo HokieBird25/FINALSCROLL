@@ -6,6 +6,14 @@
   --muted: #9a9aaa;
   --accent: #ff3b7a;
   --accent-2: #7c5cff;
+  --frame: #f2f2f6;
+  --cover: #000;
+  /* tweak these if Instagram changes the embed chrome */
+  --crop-zoom: 1.38;
+  --crop-origin-y: 30%;
+  --cover-top: 62px;
+  --cover-bottom: 86px;
+  --cover-side: 8px;
 }
 
 * { box-sizing: border-box; }
@@ -110,7 +118,7 @@ button.primary, a.primary {
 .stage {
   flex: 1;
   display: grid;
-  grid-template-columns: 56px 1fr 56px;
+  grid-template-columns: 56px minmax(0, 1fr) 56px;
   gap: 8px;
   padding: 8px 8px 16px;
   min-height: 0;
@@ -122,23 +130,70 @@ button.primary, a.primary {
 }
 .reel-card {
   display: grid;
-  grid-template-rows: minmax(280px, 1fr) auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  overflow: hidden;
+  grid-template-columns: minmax(260px, 420px) minmax(220px, 1fr);
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
   min-height: 0;
+  padding: 8px;
 }
-.embed {
+
+.phone {
+  width: min(390px, 100%);
+  margin: 0 auto;
+  padding: 10px;
+  border: 3px solid var(--frame);
+  border-radius: 32px;
+  background: #111;
+  box-shadow: 0 0 0 1px #000, 0 18px 50px rgba(0,0,0,.45);
+}
+.phone-screen {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  border-radius: 22px;
+  overflow: hidden;
   background: #000;
-  min-height: 320px;
-  height: min(62vh, 720px);
+  isolation: isolate;
 }
-.embed iframe, .embed blockquote {
-  width: 100%;
-  height: 100%;
+.embed-crop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+.embed-crop iframe {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 180%;
+  height: 180%;
   border: 0;
+  transform: translate(-50%, -50%) scale(var(--crop-zoom));
+  transform-origin: center var(--crop-origin-y);
+  pointer-events: auto;
 }
+.cover {
+  position: absolute;
+  z-index: 3;
+  background: var(--cover);
+  pointer-events: auto;
+}
+.cover-top {
+  top: 0; left: 0; right: 0;
+  height: var(--cover-top);
+}
+.cover-bottom {
+  bottom: 0; left: 0; right: 0;
+  height: var(--cover-bottom);
+}
+.cover-side {
+  top: var(--cover-top);
+  bottom: var(--cover-bottom);
+  width: var(--cover-side);
+}
+.cover-left { left: 0; }
+.cover-right { right: 0; }
+
 .fallback {
   height: 100%;
   display: flex;
@@ -150,14 +205,21 @@ button.primary, a.primary {
   text-align: center;
   color: var(--muted);
 }
-.meta { padding: 14px 16px 18px; }
+
+.meta {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  min-width: 0;
+}
 .who { display: flex; justify-content: space-between; gap: 12px; }
 #user { color: #fff; font-weight: 700; text-decoration: none; }
 #when { color: var(--muted); font-size: 13px; }
 .caption {
   white-space: pre-wrap;
   line-height: 1.45;
-  max-height: 7.2em;
+  max-height: 10em;
   overflow: auto;
   margin: 10px 0;
 }
@@ -171,8 +233,9 @@ button.primary, a.primary {
 }
 .row-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
-@media (max-width: 700px) {
+@media (max-width: 860px) {
   .stage { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
   .nav { height: 44px; }
-  .embed { height: 52vh; }
+  .reel-card { grid-template-columns: 1fr; }
+  .phone { width: min(360px, 92vw); }
 }
