@@ -134,7 +134,13 @@ function formatWhen(ts) {
   if (!ts) return "";
   const ms = ts > 1e12 ? ts : ts * 1000;
   try {
-    return new Date(ms).toLocaleString();
+    return "Saved " + new Date(ms).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   } catch {
     return "";
   }
@@ -148,22 +154,12 @@ function render() {
 
   if (!item) {
     $("embed").innerHTML = `<div class="fallback">No matching items.</div>`;
-    $("user").textContent = "";
-    $("caption").textContent = "";
-    $("tags").innerHTML = "";
     $("when").textContent = "";
+    $("open").removeAttribute("href");
     return;
   }
 
-  $("kind").textContent = item.kind;
-  $("user").textContent = item.username ? `@${item.username}` : "Unknown account";
-  $("user").href = item.username ? `https://www.instagram.com/${item.username}/` : item.url;
   $("when").textContent = formatWhen(item.timestamp);
-  $("caption").textContent = item.caption || "(no caption in export)";
-  $("tags").innerHTML = item.hashtags
-    .slice(0, 12)
-    .map((t) => `<span class="tag">#${escapeHtml(t)}</span>`)
-    .join("");
   $("open").href = item.url;
 
   const path = item.kind === "post" ? "p" : item.kind === "tv" ? "tv" : "reel";
@@ -208,6 +204,7 @@ function loadList(rawItems) {
   state.view = shuffle(state.view);
   $("start").hidden = true;
   $("player").hidden = false;
+  document.body.classList.add("playing");
   render();
 }
 
@@ -234,14 +231,6 @@ $("shuffle").addEventListener("click", () => {
   state.index = 0;
   render();
 });
-$("filterReels").addEventListener("click", () => {
-  state.reelsOnly = !state.reelsOnly;
-  $("filterReels").textContent = state.reelsOnly ? "Show all" : "Reels only";
-  applyFilters();
-  state.view = shuffle(state.view);
-  state.index = 0;
-  render();
-});
 $("search").addEventListener("input", (e) => {
   state.query = e.target.value;
   const current = state.view[state.index];
@@ -255,28 +244,18 @@ $("search").addEventListener("input", (e) => {
 $("back").addEventListener("click", () => {
   $("player").hidden = true;
   $("start").hidden = false;
+  document.body.classList.remove("playing");
   $("file").value = "";
-});
-$("copy").addEventListener("click", async () => {
-  const item = state.view[state.index];
-  if (!item) return;
-  try {
-    await navigator.clipboard.writeText(item.url);
-    $("copy").textContent = "Copied";
-    setTimeout(() => ($("copy").textContent = "Copy link"), 1000);
-  } catch {
-    $("copy").textContent = "Copy failed";
-  }
 });
 
 window.addEventListener("keydown", (e) => {
   if ($("player").hidden) return;
   if (["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
-  if (e.key === "ArrowDown" || e.key === "j" || e.key === " ") {
+  if (e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === "j" || e.key === " ") {
     e.preventDefault();
     go(1);
   }
-  if (e.key === "ArrowUp" || e.key === "k") {
+  if (e.key === "ArrowUp" || e.key === "ArrowLeft" || e.key === "k") {
     e.preventDefault();
     go(-1);
   }
