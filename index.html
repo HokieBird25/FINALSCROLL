@@ -24,56 +24,35 @@
         <ol class="hints">
           <li>Instagram → Accounts Center → Download your information → JSON</li>
           <li>Look for <code>saved_posts.json</code> in the zip</li>
-          <li>The export has links, not the videos themselves — embeds open Instagram’s player</li>
+          <li>The export has links, not the videos themselves</li>
         </ol>
       </div>
     </section>
 
-    <section id="player" class="screen" hidden>
-      <header class="topbar">
-        <button id="back" type="button" class="ghost">New file</button>
-        <div class="stats">
-          <span id="pos">0 / 0</span>
-          <span id="kind" class="pill">reel</span>
-        </div>
-        <div class="top-actions">
-          <button id="shuffle" type="button">Shuffle</button>
-          <button id="filterReels" type="button" class="ghost">Reels only</button>
-        </div>
-      </header>
-
+    <section id="player" class="screen player-screen" hidden>
       <div class="search-row">
-        <input id="search" type="search" placeholder="Filter by username or caption…" autocomplete="off" />
+        <input id="search" type="search" placeholder="Search username or caption…" autocomplete="off" />
+        <span id="pos" class="pos">0 / 0</span>
+        <button id="shuffle" type="button" class="ghost">Shuffle</button>
+        <button id="back" type="button" class="ghost">New file</button>
       </div>
 
-      <main class="stage">
-        <button id="prev" class="nav nav-prev" type="button" aria-label="Previous">▲</button>
+      <main class="theater">
+        <button id="prev" class="edge edge-prev" type="button" aria-label="Previous"></button>
 
-        <article class="reel-card">
-          <div class="phone">
-            <div class="phone-screen">
-              <div id="embed" class="embed-crop"></div>
-              <div class="cover cover-top" aria-hidden="true"></div>
-              <div class="cover cover-bottom" aria-hidden="true"></div>
-              <div class="cover cover-side cover-left" aria-hidden="true"></div>
-              <div class="cover cover-side cover-right" aria-hidden="true"></div>
-            </div>
+        <div class="phone">
+          <div class="phone-screen">
+            <div id="embed" class="embed-crop"></div>
+            <div class="cover cover-top" aria-hidden="true"></div>
+            <div class="cover cover-bottom" aria-hidden="true"></div>
+            <div class="cover cover-side cover-left" aria-hidden="true"></div>
+            <div class="cover cover-side cover-right" aria-hidden="true"></div>
+            <a id="open" class="open-btn" href="#" target="_blank" rel="noopener noreferrer">Open in Instagram</a>
+            <p id="when" class="saved-date"></p>
           </div>
-          <div class="meta">
-            <div class="who">
-              <a id="user" href="#" target="_blank" rel="noopener noreferrer">@user</a>
-              <span id="when"></span>
-            </div>
-            <p id="caption" class="caption"></p>
-            <div id="tags" class="tags"></div>
-            <div class="row-actions">
-              <a id="open" class="primary" href="#" target="_blank" rel="noopener noreferrer">Open in Instagram</a>
-              <button id="copy" type="button" class="ghost">Copy link</button>
-            </div>
-          </div>
-        </article>
+        </div>
 
-        <button id="next" class="nav nav-next" type="button" aria-label="Next">▼</button>
+        <button id="next" class="edge edge-next" type="button" aria-label="Next"></button>
       </main>
     </section>
   </div>
