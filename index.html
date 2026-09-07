@@ -4,58 +4,359 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Saved Reels Shuffle</title>
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root {
+      --bg: #000;
+      --panel: #16161d;
+      --line: #2a2a36;
+      --text: #f4f4f7;
+      --muted: #9a9aaa;
+      --accent: #ff3b7a;
+      --accent-2: #7c5cff;
+      --frame: #ececf2;
+      --search-h: 56px;
+      --crop-zoom: 1.55;
+      --crop-origin-y: 26%;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    body.playing { overflow: hidden; height: 100dvh; }
+    .screen { min-height: 100dvh; display: flex; flex-direction: column; }
+    .player-screen { height: 100dvh; overflow: hidden; }
+    .start-card {
+      margin: auto; max-width: 520px; padding: 32px 28px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+    }
+    .eyebrow { letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--muted); margin: 0 0 10px; }
+    h1 { margin: 0 0 12px; font-size: 28px; }
+    .lede { color: #c9c9d4; line-height: 1.5; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #0f0f14; padding: 1px 6px; border-radius: 6px; }
+    .file-btn {
+      display: inline-flex; margin-top: 8px; padding: 12px 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff; border-radius: 999px; cursor: pointer; font-weight: 600;
+    }
+    .file-btn input { display: none; }
+    .hints { color: var(--muted); padding-left: 18px; line-height: 1.55; }
+    .error { color: #ff7b7b; margin-top: 12px; }
+    .search-row {
+      height: var(--search-h); display: flex; gap: 8px; align-items: center;
+      padding: 8px 12px; background: #000;
+    }
+    #search {
+      flex: 1; min-width: 0; background: #16161d; border: 1px solid #2a2a36;
+      color: var(--text); padding: 8px 12px; border-radius: 12px;
+    }
+    .pos { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; white-space: nowrap; }
+    button, .open-btn {
+      border: 0; background: #2a2a38; color: var(--text); padding: 8px 12px;
+      border-radius: 10px; cursor: pointer; text-decoration: none; font: inherit; white-space: nowrap;
+    }
+    button.ghost { background: transparent; border: 1px solid #2a2a36; }
+    .theater {
+      flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .phone {
+      width: min(100vw, calc((100dvh - var(--search-h)) * 9 / 16));
+      height: min(calc(100dvh - var(--search-h)), calc(100vw * 16 / 9));
+      border: 3px solid var(--frame); border-radius: 28px; overflow: hidden; background: #000;
+    }
+    .phone-screen { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
+    .embed-crop, .embed-crop .fallback {
+      position: absolute; inset: 0; overflow: hidden; background: #000;
+    }
+    .embed-crop iframe {
+      position: absolute; left: 50%; top: 0; width: 220%; height: 220%; border: 0;
+      transform: translateX(-50%) scale(var(--crop-zoom));
+      transform-origin: center var(--crop-origin-y);
+    }
+    .open-btn {
+      position: absolute; z-index: 4; top: 12px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.72); border: 1px solid rgba(255,255,255,.28);
+      color: #fff; font-weight: 700; border-radius: 999px; padding: 8px 14px;
+    }
+    .saved-date {
+      position: absolute; z-index: 4; left: 0; right: 0; bottom: 10px; margin: 0;
+      text-align: center; color: #fff; font-size: 13px; text-shadow: 0 1px 4px #000;
+      pointer-events: none;
+    }
+    .edge {
+      position: absolute; top: 0; bottom: 0; width: 12%; max-width: 80px;
+      background: transparent; z-index: 5; padding: 0; border-radius: 0;
+    }
+    .edge-prev { left: 0; }
+    .edge-next { right: 0; }
+    .fallback { display: flex; align-items: center; justify-content: center; color: var(--muted); padding: 20px; text-align: center; }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <section id="start" class="screen">
-      <div class="card start-card">
-        <p class="eyebrow">GitHub Pages · stays in your browser</p>
-        <h1>Saved Reels Shuffle</h1>
-        <p class="lede">
-          Upload your Instagram <code>saved_posts.json</code> export.
-          Nothing is sent to a server. Items are shuffled and shown one at a time.
-        </p>
-        <label class="file-btn">
-          <input id="file" type="file" accept=".json,application/json" />
-          Choose JSON file
-        </label>
-        <p id="error" class="error" hidden></p>
-        <ol class="hints">
-          <li>Instagram → Accounts Center → Download your information → JSON</li>
-          <li>Look for <code>saved_posts.json</code> in the zip</li>
-          <li>The export has links, not the videos themselves</li>
-        </ol>
-      </div>
-    </section>
+  <section id="start" class="screen">
+    <div class="start-card">
+      <p class="eyebrow">GitHub Pages · stays in your browser</p>
+      <h1>Saved Reels Shuffle</h1>
+      <p class="lede">Upload your Instagram <code>saved_posts.json</code>. Nothing is sent to a server.</p>
+      <label class="file-btn">
+        <input id="file" type="file" accept=".json,application/json" />
+        Choose JSON file
+      </label>
+      <p id="error" class="error" hidden></p>
+    </div>
+  </section>
 
-    <section id="player" class="screen player-screen" hidden>
-      <div class="search-row">
-        <input id="search" type="search" placeholder="Search username or caption…" autocomplete="off" />
-        <span id="pos" class="pos">0 / 0</span>
-        <button id="shuffle" type="button" class="ghost">Shuffle</button>
-        <button id="back" type="button" class="ghost">New file</button>
-      </div>
-
-      <main class="theater">
-        <button id="prev" class="edge edge-prev" type="button" aria-label="Previous"></button>
-
-        <div class="phone">
-          <div class="phone-screen">
-            <div id="embed" class="embed-crop"></div>
-            <div class="cover cover-top" aria-hidden="true"></div>
-            <div class="cover cover-bottom" aria-hidden="true"></div>
-            <div class="cover cover-side cover-left" aria-hidden="true"></div>
-            <div class="cover cover-side cover-right" aria-hidden="true"></div>
-            <a id="open" class="open-btn" href="#" target="_blank" rel="noopener noreferrer">Open in Instagram</a>
-            <p id="when" class="saved-date"></p>
-          </div>
+  <section id="player" class="screen player-screen" hidden>
+    <div class="search-row">
+      <input id="search" type="search" placeholder="Search username or caption…" autocomplete="off" />
+      <span id="pos" class="pos">0 / 0</span>
+      <button id="shuffle" type="button" class="ghost">Shuffle</button>
+      <button id="back" type="button" class="ghost">New file</button>
+    </div>
+    <main class="theater">
+      <button id="prev" class="edge edge-prev" type="button" aria-label="Previous"></button>
+      <div class="phone">
+        <div class="phone-screen">
+          <div id="embed" class="embed-crop"></div>
+          <a id="open" class="open-btn" href="#" target="_blank" rel="noopener noreferrer">Open in Instagram</a>
+          <p id="when" class="saved-date"></p>
         </div>
+      </div>
+      <button id="next" class="edge edge-next" type="button" aria-label="Next"></button>
+    </main>
+  </section>
 
-        <button id="next" class="edge edge-next" type="button" aria-label="Next"></button>
-      </main>
-    </section>
-  </div>
-  <script src="app.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const setText = (id, value) => {
+      const el = $(id);
+      if (el) el.textContent = value;
+    };
+    const on = (id, event, fn) => {
+      const el = $(id);
+      if (el) el.addEventListener(event, fn);
+    };
+
+    const state = { all: [], view: [], index: 0, query: "" };
+
+    function fixMojibake(str) {
+      if (!str || typeof str !== "string") return "";
+      try {
+        const bytes = Uint8Array.from({ length: str.length }, (_, i) => str.charCodeAt(i) & 255);
+        const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+        if (!decoded || decoded.includes("\uFFFD")) return str;
+        if (decoded !== str && /[^\x00-\x7F]/.test(decoded)) return decoded;
+        return str;
+      } catch {
+        return str;
+      }
+    }
+
+    function fieldMap(dict) {
+      const out = {};
+      if (!Array.isArray(dict)) return out;
+      for (const item of dict) {
+        if (item && item.label) out[item.label] = item.value ?? item.href ?? "";
+      }
+      return out;
+    }
+
+    function parseItem(raw) {
+      const list = Array.isArray(raw.label_values) ? raw.label_values : [];
+      let url = "", caption = "", title = "", username = "", name = "";
+      const hashtags = [];
+      for (const f of list) {
+        if (f.label === "URL") url = f.value || f.href || url;
+        if (f.label === "Caption" && f.value && !caption) caption = f.value;
+        if (f.label === "Title" && f.value) title = f.value;
+        if (f.title === "Hashtags" && Array.isArray(f.dict)) {
+          for (const wrap of f.dict) {
+            const tag = fieldMap(wrap.dict).Name;
+            if (tag) hashtags.push(tag);
+          }
+        }
+        if (f.title === "Owner" && f.dict && f.dict[0]) {
+          const owner = fieldMap(f.dict[0].dict);
+          username = owner.Username || username;
+          name = owner.Name || name;
+        }
+      }
+      if (!url) url = raw.href || raw.url || raw.string_list_data?.[0]?.href || "";
+      url = String(url).trim();
+      const shortcode = (url.match(/instagram\.com\/(?:reel|p|tv)\/([^/?#]+)/i) || [])[1] || "";
+      const kind = /\/reel\//i.test(url) ? "reel" : /\/tv\//i.test(url) ? "tv" : shortcode ? "post" : "link";
+      return {
+        url, shortcode, kind,
+        caption: fixMojibake(caption || title || ""),
+        username: username || "unknown",
+        name: fixMojibake(name || ""),
+        hashtags,
+        timestamp: raw.timestamp || 0,
+        fbid: raw.fbid || "",
+      };
+    }
+
+    function unwrap(data) {
+      if (Array.isArray(data)) return data;
+      if (!data || typeof data !== "object") return [];
+      for (const k of ["saved_saved_media", "saved_posts", "saved_media", "saved", "media", "items"]) {
+        if (Array.isArray(data[k])) return data[k];
+      }
+      for (const v of Object.values(data)) {
+        if (Array.isArray(v) && v.length && typeof v[0] === "object") return v;
+      }
+      return [];
+    }
+
+    function shuffle(list) {
+      const a = list.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function applyFilters() {
+      const q = state.query.trim().toLowerCase();
+      state.view = state.all.filter((item) => {
+        if (!item.url) return false;
+        if (!q) return true;
+        return (
+          item.username.toLowerCase().includes(q) ||
+          item.name.toLowerCase().includes(q) ||
+          item.caption.toLowerCase().includes(q) ||
+          item.hashtags.some((t) => t.toLowerCase().includes(q))
+        );
+      });
+      if (state.index >= state.view.length) state.index = 0;
+    }
+
+    function formatWhen(ts) {
+      if (!ts) return "";
+      const ms = ts > 1e12 ? ts : ts * 1000;
+      try {
+        return "Saved " + new Date(ms).toLocaleString(undefined, {
+          year: "numeric", month: "short", day: "numeric",
+          hour: "numeric", minute: "2-digit",
+        });
+      } catch {
+        return "";
+      }
+    }
+
+    function render() {
+      const item = state.view[state.index];
+      setText("pos", state.view.length ? (state.index + 1) + " / " + state.view.length : "0 / 0");
+      const embed = $("embed");
+      const open = $("open");
+      if (!item) {
+        if (embed) embed.innerHTML = '<div class="fallback">No matching items.</div>';
+        setText("when", "");
+        return;
+      }
+      setText("when", formatWhen(item.timestamp));
+      if (open) open.href = item.url;
+      const path = item.kind === "post" ? "p" : item.kind === "tv" ? "tv" : "reel";
+      const embedUrl = item.shortcode
+        ? "https://www.instagram.com/" + path + "/" + encodeURIComponent(item.shortcode) + "/embed/"
+        : "";
+      if (embed) {
+        embed.innerHTML = embedUrl
+          ? '<iframe title="Instagram embed" src="' + embedUrl + '" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen></iframe>'
+          : '<div class="fallback">No embeddable Instagram URL.</div>';
+      }
+    }
+
+    function go(delta) {
+      if (!state.view.length) return;
+      state.index = (state.index + delta + state.view.length) % state.view.length;
+      render();
+    }
+
+    on("file", "change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      const err = $("error");
+      if (err) { err.hidden = true; err.textContent = ""; }
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        const items = unwrap(data);
+        if (!items.length) throw new Error("That JSON did not look like a saved-posts list.");
+        state.all = items.map(parseItem).filter((x) => x.url);
+        state.index = 0;
+        applyFilters();
+        state.view = shuffle(state.view);
+        if ($("start")) $("start").hidden = true;
+        if ($("player")) $("player").hidden = false;
+        document.body.classList.add("playing");
+        render();
+      } catch (ex) {
+        if (err) {
+          err.hidden = false;
+          err.textContent = ex.message || "Could not read that file.";
+        }
+      }
+    });
+
+    on("next", "click", () => go(1));
+    on("prev", "click", () => go(-1));
+    on("shuffle", "click", () => {
+      state.view = shuffle(state.view);
+      state.index = 0;
+      render();
+    });
+    on("search", "input", (e) => {
+      state.query = e.target.value;
+      const current = state.view[state.index];
+      applyFilters();
+      if (current) {
+        const i = state.view.findIndex((x) => x.fbid === current.fbid && x.url === current.url);
+        state.index = i >= 0 ? i : 0;
+      }
+      render();
+    });
+    on("back", "click", () => {
+      if ($("player")) $("player").hidden = true;
+      if ($("start")) $("start").hidden = false;
+      document.body.classList.remove("playing");
+      if ($("file")) $("file").value = "";
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (!$("player") || $("player").hidden) return;
+      if (["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === "j" || e.key === " ") {
+        e.preventDefault();
+        go(1);
+      }
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft" || e.key === "k") {
+        e.preventDefault();
+        go(-1);
+      }
+      if (e.key === "r") {
+        state.view = shuffle(state.view);
+        state.index = 0;
+        render();
+      }
+    });
+
+    let touchY = null;
+    window.addEventListener("touchstart", (e) => {
+      if (!$("player") || $("player").hidden) return;
+      touchY = e.changedTouches[0].clientY;
+    });
+    window.addEventListener("touchend", (e) => {
+      if (touchY == null) return;
+      const dy = e.changedTouches[0].clientY - touchY;
+      touchY = null;
+      if (Math.abs(dy) < 50) return;
+      go(dy < 0 ? 1 : -1);
+    });
+  </script>
 </body>
 </html>
