@@ -28,6 +28,8 @@
     }
     body.playing { overflow: hidden; height: 100dvh; }
     .screen { min-height: 100dvh; display: flex; flex-direction: column; }
+    .screen[hidden], [hidden] { display: none !important; }
+    body.playing #start { display: none !important; }
     .player-screen { height: 100dvh; overflow: hidden; }
     .start-card {
       margin: auto; max-width: 520px; padding: 32px 28px;
@@ -101,11 +103,12 @@
     <div class="start-card">
       <p class="eyebrow">GitHub Pages · stays in your browser</p>
       <h1>Saved Reels Shuffle</h1>
-      <p class="lede">Upload your Instagram <code>saved_posts.json</code>. Nothing is sent to a server.</p>
+      <p class="lede">Use the button below on this website. Do not upload the JSON into the GitHub repo unless you want the page to auto-load it.</p>
       <label class="file-btn">
-        <input id="file" type="file" accept=".json,application/json" />
+        <input id="file" type="file" accept=".json,application/json,text/plain,*/*" />
         Choose JSON file
       </label>
+      <p id="status" class="lede" style="margin-top:14px"></p>
       <p id="error" class="error" hidden></p>
     </div>
   </section>
@@ -278,30 +281,80 @@
       render();
     }
 
-    on("file", "change", async (e) => {
-      const file = e.target.files && e.target.files[0];
+    function showError(message) {
+      const err = $("error");
+      const status = $("status");
+      if (status) status.textContent = "";
+      if (err) {
+        err.hidden = false;
+        err.textContent = message;
+      } else {
+        alert(message);
+      }
+    }
+
+    function loadFromData(data, label) {
+      const items = unwrap(data);
+      if (!items.length) throw new Error("That file did not look like a saved-posts list.");
+      state.all = items.map(parseItem).filter((x) => x.url);
+      if (!state.all.length) throw new Error("Found JSON, but no Instagram links inside it.");
+      state.index = 0;
+      applyFilters();
+      state.view = shuffle(state.view);
+      if ($("start")) {
+        $("start").hidden = true;
+        $("start").style.display = "none";
+      }
+      if ($("player")) {
+        $("player").hidden = false;
+        $("player").style.display = "flex";
+      }
+      document.body.classList.add("playing");
+      window.scrollTo(0, 0);
+      render();
+      setText("pos", (label ? label + " · " : "") + (state.index + 1) + " / " + state.view.length);
+    }
+
+    async function readFile(file) {
+      setText("status", "Reading " + file.name + " (" + Math.round(file.size / 100000) / 10 + " MB)…");
       const err = $("error");
       if (err) { err.hidden = true; err.textContent = ""; }
+      const text = await file.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("That file is not valid JSON. Make sure you picked saved_posts.json, not the zip.");
+      }
+      loadFromData(data, file.name);
+    }
+
+    on("file", "change", async (e) => {
+      const file = e.target.files && e.target.files[0];
       if (!file) return;
       try {
-        const data = JSON.parse(await file.text());
-        const items = unwrap(data);
-        if (!items.length) throw new Error("That JSON did not look like a saved-posts list.");
-        state.all = items.map(parseItem).filter((x) => x.url);
-        state.index = 0;
-        applyFilters();
-        state.view = shuffle(state.view);
-        if ($("start")) $("start").hidden = true;
-        if ($("player")) $("player").hidden = false;
-        document.body.classList.add("playing");
-        render();
+        await readFile(file);
       } catch (ex) {
-        if (err) {
-          err.hidden = false;
-          err.textContent = ex.message || "Could not read that file.";
-        }
+        showError(ex.message || "Could not read that file.");
       }
     });
+
+    fetch("saved_posts.json", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data) loadFromData(data, "saved_posts.json"); })
+      .catch(() => {});
+
+    const start = $("start");
+    if (start) {
+      start.addEventListener("dragover", (e) => { e.preventDefault(); });
+      start.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!file) return;
+        try { await readFile(file); }
+        catch (ex) { showError(ex.message || "Could not read that file."); }
+      });
+    }
 
     on("next", "click", () => go(1));
     on("prev", "click", () => go(-1));
@@ -321,8 +374,14 @@
       render();
     });
     on("back", "click", () => {
-      if ($("player")) $("player").hidden = true;
-      if ($("start")) $("start").hidden = false;
+      if ($("player")) {
+        $("player").hidden = true;
+        $("player").style.display = "none";
+      }
+      if ($("start")) {
+        $("start").hidden = false;
+        $("start").style.display = "flex";
+      }
       document.body.classList.remove("playing");
       if ($("file")) $("file").value = "";
     });
